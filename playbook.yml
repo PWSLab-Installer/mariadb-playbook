@@ -1,0 +1,49 @@
+- hosts: localhost
+  connection: local
+  vars:
+    
+
+  tasks:
+    
+    - name: Check the version of release
+      command: hostnamectl
+      register: os_check
+      ignore_errors: yes
+    
+    -   name: Install Role Mariadb
+        local_action: command ansible-galaxy install -f bertvv.mariadb
+
+    - name: Check if Mariadb is already installed
+      stat: path=/usr/bin/mariadb
+      register: mariadb_exists
+
+    -   name: Applying role MariaDB
+        command: mv ~/.ansible/roles/bertvv.mariadb ~/.ansible/roles/pwslab.mariadb
+        when: not mariadb_exists.stat.exists
+        ignore_errors: yes
+
+    -   name: Installing MariaDB - CentOS
+        include_role:
+          name: pwslab.mariadb
+        when:
+          - not mariadb_exists.stat.exists
+          - os_check.stdout | regex_search("CentOS")
+
+    -   name: Absent the Irrelevant file of MariaDB
+        file:
+          path: /etc/apt/sources.list.d/ansible-ubuntu-ansible-focal.list
+          state: absent
+        when:
+          - not mariadb_exists.stat.exists
+          - os_check.stdout | regex_search("Ubuntu 20")
+
+    -   name: Installing MariaDB - Ubuntu
+        apt: 
+            name: mariadb-server 
+            update_cache: yes 
+            state: present
+        when:
+          - not mariadb_exists.stat.exists
+          - os_check.stdout | regex_search("Ubuntu")
+    
+    
